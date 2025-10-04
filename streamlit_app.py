@@ -201,16 +201,30 @@ def _prep_matplotlib_hooks(capture):
     return Axes, orig_imshow
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def _load_topopt_cholmod_module():
+    """Load 'topopt_cholmod.py' without executing its __main__ block."""
+    import importlib.util, types, re, pathlib
     path = os.path.join(os.path.dirname(__file__), "topopt_cholmod.py")
     if not os.path.isfile(path):
-        raise RuntimeError("Place topopt_cholmod.py")
-    spec = importlib.util.spec_from_file_location("topopt_cholmod", path)
-    mod  = importlib.util.module_from_spec(spec)
-    setattr(np, "int", int)  # numpy 2.x compat
-    spec.loader.exec_module(mod)  # type: ignore
+        raise RuntimeError("Place topopt_cholmod.py next to this file.")
+
+    # Read source and neuter the __main__ block if present
+    src = pathlib.Path(path).read_text(encoding="utf-8")
+
+    # Robustly disable the main-run block (covers various spacing/quotes)
+    pattern = r'if\s+__name__\s*==\s*["\']__main__["\']\s*:\s*'
+    src = re.sub(pattern, "if False:\n    # disabled by streamlit loader\n", src)
+
+    # Numpy 2.x compat for legacy code using np.int
+    setattr(np, "int", int)
+
+    # Execute into a fresh module namespace (no file changes on disk)
+    mod = types.ModuleType("topopt_cholmod")
+    mod.__file__ = path
+    exec(compile(src, path, "exec"), mod.__dict__)
     return mod
+
 
 
 def run_cholmod_topopt(nelx, nely, volfrac, penal, rmin, ft):
