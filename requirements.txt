@@ -1,5 +1,6 @@
-streamlit
-numpy
-scipy
-plotly
-matplotlib
+streamlit>=1.50,<1.51
+numpy>=2.2,<2.3
+scipy>=1.16,<1.17
+matplotlib>=3.10,<3.11
+plotly>=6.3,<6.4
+cvxopt>=1.3
